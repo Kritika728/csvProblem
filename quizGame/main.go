@@ -24,7 +24,7 @@ func main() {
 	var result response
 	file := readFile()
 	result = fetchFileContent(file)
-	fmt.Println("Total: ", result)
+	fmt.Printf("Total: %v Correct: %v Incorrect: %v", result.total, result.correct, result.incorrect)
 
 }
 
@@ -41,7 +41,7 @@ func readFile() *csv.Reader {
 func fetchFileContent(file *csv.Reader) response {
 	var result response
 	records, err := file.ReadAll()
-	fmt.Println("record", records)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,6 +66,7 @@ func fetchFileContent(file *csv.Reader) response {
 		ans, _ := strconv.Atoi(row.answer)
 		num1, _ := strconv.Atoi(nums[0])
 		num2, _ := strconv.Atoi(nums[1])
+
 		if num1+num2 == ans {
 			result.correct++
 		} else {
