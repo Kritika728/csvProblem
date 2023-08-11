@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
+	"time"
 )
 
 type unit struct {
@@ -22,9 +22,12 @@ type response struct {
 
 func main() {
 	var result response
-	file := readFile()
-	result = fetchFileContent(file)
-	fmt.Printf("Total: %v Correct: %v Incorrect: %v", result.total, result.correct, result.incorrect)
+	//file := readFile()
+	//result.total = getTotalQuestion(file)
+	samefile := readFile()
+	result = fetchFileContent(samefile)
+
+	fmt.Printf("%v/%v ", result.correct, result.total)
 
 }
 
@@ -38,41 +41,72 @@ func readFile() *csv.Reader {
 	return file
 }
 
+func getTotalQuestion(file *csv.Reader) int {
+	var count response
+	records, err := file.ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+	count.total = len(records[1:])
+
+	return count.total
+}
 func fetchFileContent(file *csv.Reader) response {
 	var result response
-	records, err := file.ReadAll()
+	var userAns int
+	done := make(chan bool)
+
+	data, err := file.Read()
+	result.total, _ = strconv.Atoi(data[1])
+
+	//to ignore the header
+	_, err = file.Read()
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	result.total = len(records[1:])
+	//to start the quiz, user has to press any key
+	fmt.Println("Enter any key to start the quiz")
+	fmt.Scanln()
 
-	for key, value := range records {
-		if key == 0 {
-			continue
+	go func() {
+		for {
+			record, err := file.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			//timer
+			row := unit{question: record[0], answer: record[1]}
+
+			fmt.Println("Question: ", row.question)
+
+			//give the answer of given question
+			fmt.Scanln(&userAns)
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			ans, _ := strconv.Atoi(row.answer)
+
+			if userAns == ans {
+				result.correct++
+			}
+
 		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
+		done <- true
+	}()
 
-		row := unit{question: value[0], answer: value[1]}
-
-		//split the question by "+" sign
-		nums := strings.Split(row.question, "+")
-
-		ans, _ := strconv.Atoi(row.answer)
-		num1, _ := strconv.Atoi(nums[0])
-		num2, _ := strconv.Atoi(nums[1])
-
-		if num1+num2 == ans {
-			result.correct++
-		} else {
-			result.incorrect++
-		}
-
+	//timer will start
+	select {
+	case <-done:
+		fmt.Println("You did it")
+	case <-time.After(10 * time.Second):
+		fmt.Println("TimeOut")
 	}
-	return response{correct: result.correct, incorrect: result.incorrect, total: result.total}
+	return result
 }
