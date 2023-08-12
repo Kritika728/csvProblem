@@ -31,6 +31,7 @@ func main() {
 
 }
 
+//readFile : read and parse csv file and return a pointer to a csv.Reader struct
 func readFile() *csv.Reader {
 	folder, err := os.Open("quizGame.csv")
 	if err != nil {
@@ -51,12 +52,19 @@ func getTotalQuestion(file *csv.Reader) int {
 
 	return count.total
 }
+
+//fetchFileContent : read content of file
 func fetchFileContent(file *csv.Reader) response {
 	var result response
 	var userAns int
 	done := make(chan bool)
 
+	//to get the total Number of question which is mentioned in the first row of the file
 	data, err := file.Read()
+	if err != nil {
+		log.Fatal(err, " File is empty")
+	}
+
 	result.total, _ = strconv.Atoi(data[1])
 
 	//to ignore the header
@@ -65,8 +73,9 @@ func fetchFileContent(file *csv.Reader) response {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//to start the quiz, user has to press any key
-	fmt.Println("Enter any key to start the quiz")
+
+	//to start the quiz, user has to press Enter key
+	fmt.Println("Press Enter to start the quiz")
 	fmt.Scanln()
 
 	go func() {
@@ -79,12 +88,11 @@ func fetchFileContent(file *csv.Reader) response {
 				log.Fatal(err)
 			}
 
-			//timer
 			row := unit{question: record[0], answer: record[1]}
 
 			fmt.Println("Question: ", row.question)
 
-			//give the answer of given question
+			//write the answer of given question
 			fmt.Scanln(&userAns)
 
 			if err != nil {
@@ -98,10 +106,12 @@ func fetchFileContent(file *csv.Reader) response {
 			}
 
 		}
+
+		//when all the questions are answered by user, send data to the channel
 		done <- true
 	}()
 
-	//timer will start
+	//channel receive the signal
 	select {
 	case <-done:
 		fmt.Println("You did it")
